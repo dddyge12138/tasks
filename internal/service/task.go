@@ -3,11 +3,10 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"time"
-
 	"github.com/robfig/cron/v3"
-	"e/Private/goSdk/goProject/yytest/task/internal/model"
-	"e/Private/goSdk/goProject/yytest/task/internal/repository"
+	"task/internal/model"
+	"task/internal/repository"
+	"time"
 )
 
 type TaskService interface {

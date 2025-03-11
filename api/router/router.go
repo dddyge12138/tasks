@@ -8,9 +8,7 @@ import (
 func RegisterRoutes(r *gin.Engine, taskHandler *handler.TaskHandler) {
 	v1 := r.Group("/api/v1")
 	{
-		tasks := v1.Group("/tasks")
-		{
-			tasks.POST("", taskHandler.CreateTask)
-		}
+		v1.POST("/createTask", taskHandler.CreateTask) // 添加任务
+		v1.POST("/removeTask", taskHandler.RemoveTask) // 删除任务
 	}
 }

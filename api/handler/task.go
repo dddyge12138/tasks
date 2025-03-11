@@ -2,11 +2,11 @@ package handler
 
 import (
 	"net/http"
+	"task/api/types/request"
+	"task/api/types/response"
+	"task/internal/service"
 
 	"github.com/gin-gonic/gin"
-	"e/Private/goSdk/goProject/yytest/task/api/types/request"
-	"e/Private/goSdk/goProject/yytest/task/api/types/response"
-	"e/Private/goSdk/goProject/yytest/task/internal/service"
 )
 
 type TaskHandler struct {
@@ -27,7 +27,7 @@ func NewTaskHandler(taskService service.TaskService) *TaskHandler {
 // @Produce json
 // @Param task body request.CreateTaskRequest true "Task info"
 // @Success 200 {object} response.CreateTaskResponse
-// @Router /api/v1/tasks [post]
+// @Router /api/v1/:id [post]
 func (h *TaskHandler) CreateTask(c *gin.Context) {
 	var req request.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -44,4 +44,13 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 	c.JSON(http.StatusOK, response.CreateTaskResponse{
 		TaskID: task.ID,
 	})
+}
+
+func (h *TaskHandler) RemoveTask(c *gin.Context) {
+	var req request.RemoveTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 }

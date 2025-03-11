@@ -8,7 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewPostgresDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
+var db *gorm.DB
+
+func NewPostgresDB(cfg config.DatabaseConfig) error {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai",
 		cfg.Host,
 		cfg.User,
@@ -17,10 +19,11 @@ func NewPostgresDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 		cfg.Port,
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	var err error
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return db, nil
+	return nil
 }
