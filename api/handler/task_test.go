@@ -19,7 +19,7 @@ type MockTaskService struct {
 }
 
 // CreateTask mock方法
-func (m *MockTaskService) CreateTask(ctx context.Context, name string, cronExpr *string, params interface{}) (*model.Task, error) {
+func (m *MockTaskService) CreateTask(ctx context.Context, name string, cronExpr string, params interface{}) (*model.Task, error) {
 	args := m.Called(ctx, name, cronExpr, params)
 	return args.Get(0).(*model.Task), args.Error(1)
 }
@@ -48,7 +48,12 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 	mockService := new(MockTaskService)
 
 	// 设置mock期望
-	mockService.On("CreateTask", mock.Anything).Return(nil)
+	mockService.On("CreateTask", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&model.Task{
+		ID:     1,
+		Name:   "Test Task",
+		Cron:   "1/* * * * *",
+		Status: 1,
+	}, nil)
 
 	// 创建handler
 	th := NewTaskHandler(mockService)
@@ -60,6 +65,10 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 	testTask := map[string]interface{}{
 		"name":        "Test Task",
 		"description": "Test Description",
+		"task_id":     1,
+		"params": map[string]interface{}{
+			"key": "value",
+		},
 	}
 
 	jsonData, _ := json.Marshal(testTask)

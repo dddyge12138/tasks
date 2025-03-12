@@ -10,7 +10,7 @@ import (
 )
 
 type TaskService interface {
-	CreateTask(ctx context.Context, name string, cronExpr *string, params interface{}) (*model.Task, error)
+	CreateTask(ctx context.Context, name string, cronExpr string, params interface{}) (*model.Task, error)
 }
 
 type taskService struct {
@@ -25,7 +25,7 @@ func NewTaskService(taskRepo repository.TaskRepository) TaskService {
 	}
 }
 
-func (s *taskService) CreateTask(ctx context.Context, name string, cronExpr *string, params interface{}) (*model.Task, error) {
+func (s *taskService) CreateTask(ctx context.Context, name string, cronExpr string, params interface{}) (*model.Task, error) {
 	// 将参数转换为JSON
 	paramsBytes, err := json.Marshal(params)
 	if err != nil {
@@ -40,8 +40,8 @@ func (s *taskService) CreateTask(ctx context.Context, name string, cronExpr *str
 	}
 
 	// 如果是定时任务，解析cron表达式并设置下次执行时间
-	if cronExpr != nil {
-		schedule, err := s.parser.Parse(*cronExpr)
+	if len(cronExpr) != 0 {
+		schedule, err := s.parser.Parse(cronExpr)
 		if err != nil {
 			return nil, err
 		}
