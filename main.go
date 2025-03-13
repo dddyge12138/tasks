@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"log"
+	"task/api/router"
 	"task/config"
 	"task/pkg/database"
 )
@@ -40,6 +41,11 @@ func main() {
 	r := gin.Default()
 
 	// TODO: Setup routes
+	taskHandler, err := InitTaskHandler(database.Db)
+	if err != nil {
+		log.Fatalf("Failed to initialize task handler: %s", err)
+	}
+	router.RegisterRoutes(r, taskHandler)
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
