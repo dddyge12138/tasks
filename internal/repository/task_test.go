@@ -43,6 +43,7 @@ func TestCreateTask(t *testing.T) {
 
 	now := time.Now()
 	task := &model.Task{
+		TaskId:          1111231233,
 		Name:            "Test Task",
 		Status:          0,
 		Cron:            "*/5 * * * *",
@@ -72,6 +73,7 @@ func TestRemoveTask(t *testing.T) {
 	now := time.Now()
 	// 创建一个测试任务
 	task := &model.Task{
+		TaskId:          2222222,
 		Name:            "Test Task",
 		Status:          0,
 		Cron:            "*/5 * * * *",
@@ -103,6 +105,7 @@ func TestGetTaskById(t *testing.T) {
 	now := time.Now()
 	// 创建一个测试任务
 	expectedTask := &model.Task{
+		TaskId:          1111111,
 		Name:            "Test Task",
 		Status:          0,
 		Cron:            "*/5 * * * *",

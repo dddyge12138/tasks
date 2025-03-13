@@ -7,6 +7,7 @@ import (
 
 type Task struct {
 	ID              int64         `json:"id" gorm:"primaryKey;autoIncrement"`
+	TaskId          int64         `json:"task_id"`
 	Name            string        `json:"name"`
 	Status          int           `json:"status"`
 	Cron            string        `json:"cron"`
@@ -20,7 +21,7 @@ type Task struct {
 
 type TaskExecution struct {
 	ID            int64     `json:"id" gorm:"primaryKey;autoIncrement"`
-	TaskID        int64     `json:"task_id"`
+	TaskId        int64     `json:"task_id"`
 	ExecutionTime time.Time `json:"execution_time"`
 	Status        int       `json:"status"`
 	ErrorMessage  string    `json:"error_message"`
@@ -31,8 +32,8 @@ type TaskExecution struct {
 
 type TaskResult struct {
 	ID         int64     `json:"id" gorm:"primaryKey;autoIncrement"`
-	TaskID     int64     `json:"task_id"`
-	CronTaskID int64     `json:"cron_task_id"`
+	TaskId     int64     `json:"task_id"`
+	CronTaskId int64     `json:"cron_task_id"`
 	Status     int       `json:"status"`
 	Result     []byte    `json:"result" gorm:"type:jsonb"`
 	CreatedAt  time.Time `json:"created_at"`

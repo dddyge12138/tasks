@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"task/api/types/request"
 	"task/api/types/response"
 	"task/internal/service"
+	"task/pkg/Constants"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +29,7 @@ func NewTaskHandler(taskService service.TaskService) *TaskHandler {
 // @Produce json
 // @Param task body request.CreateTaskRequest true "Task info"
 // @Success 200 {object} response.CreateTaskResponse
-// @Router /api/v1/:id [post]
+// @Router /api/v1/createTask [post]
 func (h *TaskHandler) CreateTask(c *gin.Context) {
 	var req request.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,7 +37,7 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		return
 	}
 
-	task, err := h.taskService.CreateTask(c.Request.Context(), req.Name, req.Cron, req.Params)
+	task, err := h.taskService.CreateTask(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -52,5 +54,15 @@ func (h *TaskHandler) RemoveTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	err := h.taskService.RemoveTask(c.Request.Context(), req)
+	if errors.Is(err, Constants.ErrTaskNotFound) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Task removed successfully"})
+	return
 }

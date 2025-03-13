@@ -1,6 +1,8 @@
 -- 创建tasks表
-CREATE TABLE IF NOT EXISTS tasks (
+drop table if exists tasks;
+CREATE TABLE tasks (
     id BIGSERIAL PRIMARY KEY,
+    task_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     status SMALLINT NOT NULL DEFAULT 1, -- 任务状态：1-待执行，2-执行中，3-已完成，4-已失败
     cron VARCHAR(100) DEFAULT NULL, -- cron表达式，为空表示一次性任务
@@ -16,11 +18,13 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX idx_tasks_next_pending_time ON tasks(next_pending_time);
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_cron_task_ids ON tasks USING GIN(cron_task_ids);
+create unique index idx_tasks_task_id on tasks(task_id);
 
 -- 创建task_executions表
+drop table if exists task_executions;
 CREATE TABLE IF NOT EXISTS task_executions (
     id BIGSERIAL PRIMARY KEY,
-    task_id BIGINT NOT NULL REFERENCES tasks(id),
+    task_id BIGINT NOT NULL,
     execution_time TIMESTAMP WITH TIME ZONE NOT NULL,
     status SMALLINT NOT NULL, -- 执行状态：1-执行中，2-成功，3-失败
     error_message TEXT DEFAULT NULL,
@@ -32,9 +36,10 @@ CREATE TABLE IF NOT EXISTS task_executions (
 CREATE INDEX idx_task_executions_task_id ON task_executions(task_id);
 
 -- 创建task_results表
+drop table if exists task_results;
 CREATE TABLE IF NOT EXISTS task_results (
     id BIGSERIAL PRIMARY KEY,
-    task_id BIGINT NOT NULL REFERENCES tasks(id),
+    task_id BIGINT NOT NULL,
     cron_task_id BIGINT NOT NULL,
     status SMALLINT NOT NULL, -- 状态：1-成功，2-失败
     result JSONB NOT NULL,

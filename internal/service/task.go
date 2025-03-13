@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/robfig/cron/v3"
+	"task/api/types/request"
 	"task/internal/model"
 	"task/internal/repository"
+	"task/pkg/Constants"
 	"time"
 )
 
 type TaskService interface {
-	CreateTask(ctx context.Context, name string, cronExpr string, params interface{}) (*model.Task, error)
+	CreateTask(ctx context.Context, req request.CreateTaskRequest) (*model.Task, error)
+	RemoveTask(ctx context.Context, req request.RemoveTaskRequest) error
 }
 
 type taskService struct {
@@ -25,23 +28,33 @@ func NewTaskService(taskRepo repository.TaskRepository) TaskService {
 	}
 }
 
-func (s *taskService) CreateTask(ctx context.Context, name string, cronExpr string, params interface{}) (*model.Task, error) {
+func (s *taskService) RemoveTask(ctx context.Context, req request.RemoveTaskRequest) error {
+	if _, err := s.taskRepo.GetTaskById(ctx, req.TaskId); err != nil {
+		return Constants.ErrTaskNotFound
+	}
+	return s.taskRepo.RemoveTask(ctx, &model.Task{
+		TaskId: req.TaskId,
+	})
+}
+
+func (s *taskService) CreateTask(ctx context.Context, req request.CreateTaskRequest) (*model.Task, error) {
 	// 将参数转换为JSON
-	paramsBytes, err := json.Marshal(params)
+	paramsBytes, err := json.Marshal(req.Params)
 	if err != nil {
 		return nil, err
 	}
 
 	task := &model.Task{
-		Name:   name,
+		TaskId: req.TaskId,
+		Name:   req.Name,
 		Status: 1, // 待执行状态
-		Cron:   cronExpr,
+		Cron:   req.Cron,
 		Params: paramsBytes,
 	}
 
 	// 如果是定时任务，解析cron表达式并设置下次执行时间
-	if len(cronExpr) != 0 {
-		schedule, err := s.parser.Parse(cronExpr)
+	if len(req.Cron) != 0 {
+		schedule, err := s.parser.Parse(req.Cron)
 		if err != nil {
 			return nil, err
 		}
