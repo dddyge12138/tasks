@@ -9,6 +9,8 @@ import (
 
 type TaskRepository interface {
 	CreateTask(ctx context.Context, task *model.Task) error
+	RemoveTask(ctx context.Context, task *model.Task) error
+	GetTaskById(ctx context.Context, taskId int64) (*model.Task, error)
 }
 
 type taskRepository struct {
@@ -24,7 +26,7 @@ func (r *taskRepository) CreateTask(ctx context.Context, task *model.Task) error
 }
 
 func (r *taskRepository) RemoveTask(ctx context.Context, task *model.Task) error {
-	return r.db.WithContext(ctx).Where("id = ?", task.ID).Update("is_deleted", 1).Error
+	return r.db.WithContext(ctx).Table("tasks").Where("id = ?", task.ID).Update("is_deleted", 1).Error
 }
 
 func (r *taskRepository) GetTaskById(ctx context.Context, taskId int64) (*model.Task, error) {

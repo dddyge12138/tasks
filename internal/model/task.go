@@ -6,7 +6,7 @@ import (
 )
 
 type Task struct {
-	ID              int64         `json:"id" gorm:"primaryKey"`
+	ID              int64         `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name            string        `json:"name"`
 	Status          int           `json:"status"`
 	Cron            string        `json:"cron"`
@@ -19,7 +19,7 @@ type Task struct {
 }
 
 type TaskExecution struct {
-	ID            int64     `json:"id" gorm:"primaryKey"`
+	ID            int64     `json:"id" gorm:"primaryKey;autoIncrement"`
 	TaskID        int64     `json:"task_id"`
 	ExecutionTime time.Time `json:"execution_time"`
 	Status        int       `json:"status"`
@@ -30,7 +30,7 @@ type TaskExecution struct {
 }
 
 type TaskResult struct {
-	ID         int64     `json:"id" gorm:"primaryKey"`
+	ID         int64     `json:"id" gorm:"primaryKey;autoIncrement"`
 	TaskID     int64     `json:"task_id"`
 	CronTaskID int64     `json:"cron_task_id"`
 	Status     int       `json:"status"`
