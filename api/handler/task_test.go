@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
+	"task/api/types/request"
 	"task/internal/model"
 	"testing"
 )
@@ -19,14 +20,14 @@ type MockTaskService struct {
 }
 
 // CreateTask mock方法
-func (m *MockTaskService) CreateTask(ctx context.Context, name string, cronExpr string, params interface{}) (*model.Task, error) {
-	args := m.Called(ctx, name, cronExpr, params)
+func (m *MockTaskService) CreateTask(ctx context.Context, req request.CreateTaskRequest) (*model.Task, error) {
+	args := m.Called(ctx, req)
 	return args.Get(0).(*model.Task), args.Error(1)
 }
 
 // RemoveTask mock方法
-func (m *MockTaskService) RemoveTask(id string) error {
-	args := m.Called(id)
+func (m *MockTaskService) RemoveTask(ctx context.Context, req request.RemoveTaskRequest) error {
+	args := m.Called(req.TaskId)
 	return args.Error(0)
 }
 
@@ -48,7 +49,7 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 	mockService := new(MockTaskService)
 
 	// 设置mock期望
-	mockService.On("CreateTask", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&model.Task{
+	mockService.On("CreateTask", mock.Anything, mock.Anything).Return(&model.Task{
 		ID:     1,
 		Name:   "Test Task",
 		Cron:   "1/* * * * *",
@@ -91,7 +92,7 @@ func TestTaskHandler_RemoveTask(t *testing.T) {
 	mockService := new(MockTaskService)
 
 	// 设置mock期望
-	mockService.On("RemoveTask", mock.Anything).Return(nil)
+	mockService.On("RemoveTask", mock.Anything, mock.Anything).Return(nil)
 
 	// 创建handler
 	th := NewTaskHandler(mockService)

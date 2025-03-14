@@ -1,8 +1,12 @@
 version: '3.8'
 
+networks:
+  pulsar_network:
+    driver: bridge
+
 services:
   postgres:
-    image: postgres
+    image: postgres:15
     container_name: postgres
     restart: always
     environment:
@@ -15,6 +19,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../../database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - pulsar_network
 
   redis:
     image: redis:7-alpine
@@ -24,11 +30,30 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    networks:
+      - pulsar_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  pulsar:
+    image: apachepulsar/pulsar:2.6.0
+    container_name: pulsar
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    command: bin/pulsar standalone
+    environment:
+      PULSAR_MEM: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=1g"
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - pulsar_network
 
 volumes:
   postgres_data:
