@@ -6,7 +6,7 @@ CREATE TABLE tasks (
     name VARCHAR(255) NOT NULL,
     status SMALLINT NOT NULL DEFAULT 1, -- 任务状态：1-待执行，2-执行中，3-已完成，4-已失败
     cron VARCHAR(100) DEFAULT NULL, -- cron表达式，为空表示一次性任务
-    next_pending_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    next_pending_time BIGINT default 0,
     params JSONB NOT NULL, -- 任务参数JSON数组
     cron_task_ids BIGINT[] DEFAULT NULL, -- 存储拆分后的子任务ID数组
     is_deleted SMALLINT NOT NULL DEFAULT 0,

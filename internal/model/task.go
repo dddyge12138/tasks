@@ -11,7 +11,7 @@ type Task struct {
 	Name            string        `json:"name"`
 	Status          int           `json:"status"`
 	Cron            string        `json:"cron"`
-	NextPendingTime time.Time     `json:"next_pending_time"`
+	NextPendingTime int64         `json:"next_pending_time"`
 	Params          []byte        `json:"params" gorm:"type:jsonb"`
 	CronTaskIds     pq.Int64Array `json:"cron_task_ids" gorm:"type:bigint[]"`
 	IsDeleted       int           `json:"is_deleted"`

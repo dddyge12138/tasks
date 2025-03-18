@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
-	"strconv"
 	"task/api/types/request"
 	"task/internal/model"
 	"task/internal/repository"
@@ -87,19 +86,12 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 	}
 	// 2 => 加入到redis的有序集合
 	var members []redis.Z
-	pipe := redis_db.RedisDb.Pipeline()
 	for _, task := range tasks {
 		members = append(members, redis.Z{
 			Score:  float64(task.NextPendingTime),
-			Member: task.TaskId,
+			Member: json.Marshal(task),
 		})
-		// 单独对每个task存到哈希表，键名就是task_id, 使用管道一次性写入
-		pipe.Set(ctx, strconv.FormatInt(task.TaskId, 10), task, time.Hour)
 	}
-	pipe.ZAdd(ctx, Constants.TaskSlotKey, members...)
-	_, err = pipe.Exec(ctx)
-	if err != nil {
-		return err
-	}
+	redis_db.RedisDb.ZAdd(ctx, Constants.TaskSlotKey, members...)
 	return nil
 }

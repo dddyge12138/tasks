@@ -66,3 +66,12 @@ func (h *TaskHandler) RemoveTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task removed successfully"})
 	return
 }
+
+// TODO 内网接口，后面移动到Internal
+func (h *TaskHandler) LoadTask(c *gin.Context) {
+	err := h.taskService.LoadTask(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Task loaded successfully"})
+}

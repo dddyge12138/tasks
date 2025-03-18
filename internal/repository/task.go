@@ -11,6 +11,7 @@ type TaskRepository interface {
 	CreateTask(ctx context.Context, task *model.Task) error
 	RemoveTask(ctx context.Context, task *model.Task) error
 	GetTaskById(ctx context.Context, taskId int64) (*model.Task, error)
+	GetTasksByTime(ctx context.Context, startTime, endTime int64) ([]*model.Task, error)
 }
 
 type taskRepository struct {
@@ -35,4 +36,12 @@ func (r *taskRepository) GetTaskById(ctx context.Context, taskId int64) (*model.
 		return nil, err
 	}
 	return &task, nil
+}
+
+func (r *taskRepository) GetTasksByTime(ctx context.Context, startTime, endTime int64) ([]*model.Task, error) {
+	var tasks []*model.Task
+	if err := r.db.WithContext(ctx).Where("next_pending_time >= ? AND next_pending_time <= ?", startTime, endTime).Find(&tasks).Error; err != nil {
+		return tasks, err
+	}
+	return tasks, nil
 }

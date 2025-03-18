@@ -8,6 +8,7 @@ import (
 	"task/api/router"
 	"task/config"
 	"task/pkg/database"
+	"task/pkg/redis"
 )
 
 func main() {
@@ -32,15 +33,14 @@ func main() {
 	}
 
 	// Initialize Redis
-	//redisClient, err := redis.NewRedisClient(cfg.Redis)
-	//if err != nil {
-	//	log.Fatalf("Failed to initialize Redis: %s", err)
-	//}
+	err = redis_db.NewRedisClient(cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %s", err)
+	}
 
 	// Initialize Gin router
 	r := gin.Default()
 
-	// TODO: Setup routes
 	taskHandler, err := InitTaskHandler(database.Db)
 	if err != nil {
 		log.Fatalf("Failed to initialize task handler: %s", err)
