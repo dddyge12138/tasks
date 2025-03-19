@@ -10,6 +10,7 @@ CREATE TABLE tasks (
     params JSONB NOT NULL, -- 任务参数JSON数组
     cron_task_ids BIGINT[] DEFAULT NULL, -- 存储拆分后的子任务ID数组
     is_deleted SMALLINT NOT NULL DEFAULT 0,
+    version BIGINT DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS task_executions (
     status SMALLINT NOT NULL, -- 执行状态：1-执行中，2-成功，3-失败
     error_message TEXT DEFAULT NULL,
     retry_count INTEGER NOT NULL DEFAULT 0,
+    version BIGINT DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -41,6 +43,7 @@ CREATE TABLE IF NOT EXISTS task_results (
     id BIGSERIAL PRIMARY KEY,
     task_id BIGINT NOT NULL,
     cron_task_id BIGINT NOT NULL,
+    version BIGINT DEFAULT 1,
     status SMALLINT NOT NULL, -- 状态：1-成功，2-失败
     result JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

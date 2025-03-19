@@ -3,17 +3,20 @@ package redis_db
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"task/config"
+	"testing"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func testZRangeByScore() {
+func TestZRangeByScore(t *testing.T) {
 	var err error
 	// Initialize Redis client
 	err = NewRedisClient(config.RedisConfig{
 		Host:     "localhost",
-		Port:     6379,
+		Port:     16379,
 		Password: "",
 		DB:       1,
 	})
@@ -23,8 +26,8 @@ func testZRangeByScore() {
 
 	// Define the key and score range
 	key := "test_producer_task_key"
-	minScore := "0"
-	maxScore := "100"
+	maxScore := strconv.FormatInt(time.Now().Unix(), 10)
+	minScore := strconv.FormatInt(time.Now().Add(-30*time.Second).Unix(), 10)
 
 	// 先添加一些测试数据
 	members := []redis.Z{

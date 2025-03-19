@@ -15,6 +15,7 @@ type Task struct {
 	Params          []byte        `json:"params" gorm:"type:jsonb"`
 	CronTaskIds     pq.Int64Array `json:"cron_task_ids" gorm:"type:bigint[]"`
 	IsDeleted       int           `json:"is_deleted"`
+	Version         int64         `json:"version"`
 	CreatedAt       time.Time     `json:"created_at"`
 	UpdatedAt       time.Time     `json:"updated_at"`
 }
@@ -26,6 +27,7 @@ type TaskExecution struct {
 	Status        int       `json:"status"`
 	ErrorMessage  string    `json:"error_message"`
 	RetryCount    int       `json:"retry_count"`
+	Version       int64     `json:"version"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
@@ -35,6 +37,7 @@ type TaskResult struct {
 	TaskId     int64     `json:"task_id"`
 	CronTaskId int64     `json:"cron_task_id"`
 	Status     int       `json:"status"`
+	Version    int64     `json:"version"`
 	Result     []byte    `json:"result" gorm:"type:jsonb"`
 	CreatedAt  time.Time `json:"created_at"`
 }

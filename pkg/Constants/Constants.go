@@ -6,4 +6,5 @@ var ErrTaskNotFound = errors.New("task not found")
 
 const (
 	TaskSlotKey = "tasks:slot"
+	TaskInfoKey = "tasks:%s"
 )

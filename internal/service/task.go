@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"strconv"
@@ -94,7 +95,7 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 			Member: task.TaskId,
 		})
 		// 单独对每个task存到哈希表，键名就是task_id, 使用管道一次性写入
-		pipe.Set(ctx, strconv.FormatInt(task.TaskId, 10), task, time.Hour)
+		pipe.Set(ctx, fmt.Sprintf(Constants.TaskInfoKey, strconv.FormatInt(task.TaskId, 10)), task, time.Hour)
 	}
 	pipe.ZAdd(ctx, Constants.TaskSlotKey, members...)
 	_, err = pipe.Exec(ctx)

@@ -31,6 +31,11 @@ func (m *MockTaskService) RemoveTask(ctx context.Context, req request.RemoveTask
 	return args.Error(0)
 }
 
+func (m *MockTaskService) LoadTask(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func setupTestRouter(th *TaskHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -39,6 +44,7 @@ func setupTestRouter(th *TaskHandler) *gin.Engine {
 	{
 		v1.POST("/createTask", th.CreateTask)
 		v1.POST("/removeTask", th.RemoveTask)
+		v1.POST("/loadTask", th.LoadTask)
 	}
 
 	return r
