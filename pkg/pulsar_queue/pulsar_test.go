@@ -1,4 +1,4 @@
-package pulsar
+package pulsar_queue
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	pulsarURL        = "pulsar://localhost:16650"
+	pulsarURL        = "pulsar_queue://localhost:16650"
 	testTopic        = "test-topic"
 	testMessage      = "Hello Pulsar!"
 	subscriptionName = "test-subscription"
@@ -25,7 +25,7 @@ func TestPulsarProducerConsumer(t *testing.T) {
 		ConnectionTimeout: 30 * time.Second,
 	})
 	if err != nil {
-		t.Fatalf("Could not create pulsar client: %v", err)
+		t.Fatalf("Could not create pulsar_queue client: %v", err)
 	}
 	defer client.Close()
 

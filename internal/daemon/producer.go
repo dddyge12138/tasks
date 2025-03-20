@@ -11,7 +11,7 @@ import (
 )
 
 func Init() {
-
+	go TaskProducerRun()
 }
 
 func TaskProducerRun() {

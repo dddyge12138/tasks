@@ -8,6 +8,7 @@ import (
 	"task/api/router"
 	"task/config"
 	"task/pkg/database"
+	"task/pkg/pulsar_queue"
 	"task/pkg/redis"
 )
 
@@ -36,6 +37,12 @@ func main() {
 	err = redis_db.NewRedisClient(cfg.Redis)
 	if err != nil {
 		log.Fatalf("Failed to initialize Redis: %s", err)
+	}
+
+	// Initialize Pulsar
+	_, err = pulsar_queue.NewPulsarClient(cfg.Pulsar)
+	if err != nil {
+		log.Fatalf("Failed to initialize Pulsar: %s", err)
 	}
 
 	// Initialize Gin router
