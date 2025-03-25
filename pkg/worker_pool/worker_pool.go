@@ -79,7 +79,7 @@ func (wp *WorkerPool) worker(ctx context.Context, id int) {
 			case wp.results <- Result{Value: value, Err: err, Job: job}:
 			case <-wp.done:
 				return
-			case <-ctx.Done():
+			case <-jobCtx.Done():
 				return
 			}
 		}
@@ -90,10 +90,6 @@ func (wp *WorkerPool) worker(ctx context.Context, id int) {
 func (wp *WorkerPool) processResults(ctx context.Context) {
 	for {
 		select {
-		case <-wp.done:
-			return
-		case <-ctx.Done():
-			return
 		case result, ok := <-wp.results:
 			if !ok {
 				return
@@ -104,6 +100,13 @@ func (wp *WorkerPool) processResults(ctx context.Context) {
 					// TODO 例如记录日志或者重试
 				}
 			}
+		case <-wp.done:
+			return
+			// 这里是个bug！！这里不应该监听ctx的退出信号，因为这个结果处理协程的生命周期应该随着协程池结束
+			// 引以为戒！
+			//case <-ctx.Done():
+			//	fmt.Println("接受结果出错")
+			//	return
 		}
 	}
 }

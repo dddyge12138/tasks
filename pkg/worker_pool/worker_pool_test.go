@@ -45,7 +45,7 @@ func TestWorkerPoolBasicFunctionality(t *testing.T) {
 	defer cancel()
 
 	// 创建工作池：3个工作协程，队列大小为5，任务超时2秒
-	wp := NewWorkerPool(3, 5, 2*time.Second)
+	wp := NewWorkerPool(3, 10, 2*time.Second)
 
 	// 记录处理的结果数量
 	var processedCount int32
@@ -157,20 +157,12 @@ func TestWorkerPoolCancelContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// 创建工作池
-	wp := NewWorkerPool(2, 5, 1*time.Second)
-	wp.Start(ctx)
-
+	wp := NewWorkerPool(2, 5, 5*time.Second)
 	// 用于等待任务被取消
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	var cancelled bool
-	longJob := &MockJob{
-		id:       1,
-		duration: 5 * time.Second, // 设置一个长时间任务
-		executed: false,
-	}
-
 	// 设置回调函数以检测取消
 	wp.SetCallback(func(result Result) error {
 		if errors.Is(result.Err, context.Canceled) {
@@ -180,6 +172,14 @@ func TestWorkerPoolCancelContext(t *testing.T) {
 		return nil
 	})
 
+	// 启动工作池
+	longJob := &MockJob{
+		id:       1,
+		duration: 5 * time.Second, // 设置一个长时间任务
+		executed: false,
+	}
+
+	wp.Start(ctx)
 	// 提交任务
 	wp.Submit(longJob)
 

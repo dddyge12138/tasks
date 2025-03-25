@@ -16,6 +16,8 @@ func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 
 	select {
 	case <-ctx.Done():
+		// TODO 这里很关键，任务在处理的过程中要监听超时信号, 因为如果任务处理的时间过长，
+		// TODO 超时了但是没有进行处理，就会出现父协程通知退出但没有退出的情况
 		// 超时退出
 		return nil, ctx.Err()
 	default:
