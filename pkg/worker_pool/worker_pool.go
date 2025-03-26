@@ -2,6 +2,7 @@ package worker_pool
 
 import (
 	"context"
+	"google.golang.org/appengine/log"
 	"sync"
 	"time"
 )
@@ -96,8 +97,9 @@ func (wp *WorkerPool) processResults(ctx context.Context) {
 			}
 			if wp.callback != nil {
 				if err := wp.callback(result); err != nil {
-					// TODO 这里可以添加错误处理逻辑
-					// TODO 例如记录日志或者重试
+					// 这里可以添加错误处理逻辑
+					// 例如记录日志或者重试
+					log.Errorf(ctx, "Error processing result: %+v, err %s", result, err.Error())
 				}
 			}
 		case <-wp.done:
