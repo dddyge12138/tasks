@@ -70,7 +70,6 @@ func setup() {
 	InitProducer()
 	initProducerWorkerPool(ctx)
 	go TaskProducerRun(ctx)
-	defer producerWorkerPoolInstance.Stop()
 	log.Println("初始化完成")
 }
 
@@ -138,7 +137,7 @@ func clearTest() {
 	if cancelFunc != nil {
 		cancelFunc()
 	}
-
+	producerWorkerPoolInstance.Stop()
 	// 关闭结果通道
 	close(resultChan)
 }

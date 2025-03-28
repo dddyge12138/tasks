@@ -2,7 +2,7 @@ package worker_pool
 
 import (
 	"context"
-	"google.golang.org/appengine/log"
+	"log"
 	"sync"
 	"time"
 )
@@ -74,6 +74,11 @@ func (wp *WorkerPool) worker(ctx context.Context, id int) {
 			// 为每一个任务创建一个超时上下文
 			jobCtx, cancel := context.WithTimeout(ctx, wp.timeout)
 			value, err := job.Process(jobCtx)
+			if err != nil {
+				log.Printf("worker协程处理任务得到错误, err_msg:%s\n", err.Error())
+				cancel()
+				continue
+			}
 			cancel()
 			// 将结果发送到结果channel
 			select {
@@ -99,7 +104,7 @@ func (wp *WorkerPool) processResults(ctx context.Context) {
 				if err := wp.callback(result); err != nil {
 					// 这里可以添加错误处理逻辑
 					// 例如记录日志或者重试
-					log.Errorf(ctx, "Error processing result: %+v, err %s", result, err.Error())
+					log.Printf("Error processing result: %+v, err %s", result, err.Error())
 				}
 			}
 		case <-wp.done:

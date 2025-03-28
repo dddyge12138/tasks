@@ -57,6 +57,9 @@ func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 		log.Printf("生产者投递消息成功，消息id结构体:%+v", msgReceipt)
 
 		tpj.Task.CronTaskIds = []int64{rand.Int63()}
+		if len(tpj.Task.Cron) == 0 {
+			return tpj.Task, nil
+		}
 		tpj.Task.Version++
 		schedule, err := Parser.Parse(tpj.Task.Cron)
 		if err != nil {
