@@ -12,6 +12,7 @@ import (
 	"task/pkg/database"
 	"task/pkg/pulsar_queue"
 	"task/pkg/redis"
+	"task/pkg/worker_pool"
 )
 
 func main() {
@@ -74,10 +75,12 @@ func InitAllComponents(ctx context.Context) (config.Config, *gin.Engine) {
 }
 
 func InitTaskProducer(ctx context.Context) {
-	// 启动任务生产者
-	go daemon.TaskProducerRun(ctx)
+	// 初始化pulsar客户端
+	worker_pool.InitProducer()
 	// 初始化生产者的协程池
 	daemon.InitProducerWorkerPool(ctx)
+	// 启动任务生产者
+	go daemon.TaskProducerRun(ctx)
 	// 主程序结束时关闭工作池
 	defer daemon.ProducerWorkerPoolInstance.Stop()
 }

@@ -2,8 +2,10 @@ package redis_db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/appengine/log"
 	"strconv"
 	"task/config"
 	"task/internal/model"
@@ -49,9 +51,15 @@ func GetTasksList(ctx context.Context, startTime, endTime int64) ([]*model.Task,
 	if mGetCmd.Err() != nil {
 		return tasks, mGetCmd.Err()
 	}
+	var tmpTask *model.Task
 	for _, task := range mGetCmd.Val() {
 		if task != nil {
-			tasks = append(tasks, task.(*model.Task))
+			err := json.Unmarshal([]byte(task.(string)), &tmpTask)
+			if err != nil {
+				log.Errorf(ctx, "从redis中获取到无法反序列化的任务,请检查")
+				continue
+			}
+			tasks = append(tasks, tmpTask)
 		}
 	}
 	return tasks, nil

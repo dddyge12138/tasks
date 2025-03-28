@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
+	"google.golang.org/appengine/log"
 	"strconv"
 	"task/api/types/request"
 	"task/internal/model"
@@ -63,10 +65,10 @@ func (s *taskService) CreateTask(ctx context.Context, req request.CreateTaskRequ
 		if err != nil {
 			return nil, err
 		}
-		task.NextPendingTime = int64(schedule.Next(time.Now()).Second())
+		task.NextPendingTime = schedule.Next(time.Now()).Unix()
 	} else {
 		// 一次性任务，直接设置为当前时间
-		task.NextPendingTime = int64(time.Now().Second())
+		task.NextPendingTime = time.Now().Unix()
 	}
 
 	// 保存到数据库
@@ -82,7 +84,7 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 	now := time.Now()
 	var tasks []*model.Task
 	var err error
-	tasks, err = s.taskRepo.GetTasksByTime(ctx, int64(now.Second()), int64(now.Add(2*time.Hour).Second()))
+	tasks, err = s.taskRepo.GetTasksByTime(ctx, now.Unix(), now.Add(2*time.Hour).Unix())
 	if err != nil {
 		return nil
 	}
@@ -90,12 +92,20 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 	var members []redis.Z
 	pipe := redis_db.RedisDb.Pipeline()
 	for _, task := range tasks {
+		// 单独对每个task存入具体内容，键名就是task_id, 使用管道一次性写入
+		taskStr, err := json.Marshal(task)
+		if err != nil {
+			log.Errorf(ctx, "task_id:%d 无法加载到redis中", task.TaskId)
+			continue
+		}
 		members = append(members, redis.Z{
 			Score:  float64(task.NextPendingTime),
 			Member: task.TaskId,
 		})
-		// 单独对每个task存到哈希表，键名就是task_id, 使用管道一次性写入
-		pipe.Set(ctx, fmt.Sprintf(Constants.TaskInfoKey, strconv.FormatInt(task.TaskId, 10)), task, time.Hour)
+		pipe.Set(ctx, fmt.Sprintf(Constants.TaskInfoKey, strconv.FormatInt(task.TaskId, 10)), taskStr, time.Hour)
+	}
+	if len(members) == 0 {
+		return errors.New("没有需要加载的任务")
 	}
 	pipe.ZAdd(ctx, Constants.TaskSlotKey, members...)
 	_, err = pipe.Exec(ctx)

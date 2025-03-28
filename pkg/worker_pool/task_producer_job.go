@@ -3,13 +3,14 @@ package worker_pool
 import (
 	"context"
 	"encoding/json"
-	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/robfig/cron/v3"
 	"log"
 	"math/rand"
 	"task/internal/model"
 	"task/pkg/pulsar_queue"
 	"time"
+
+	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/robfig/cron/v3"
 )
 
 // TaskProducerJob实现了Job接口，用来处理(生产者的任务对象)
@@ -26,7 +27,7 @@ type TaskMessage struct {
 var Parser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 var Producer pulsar.Producer
 
-func init() {
+func InitProducer() {
 	producer, err := pulsar_queue.NewProducer(pulsar.ProducerOptions{
 		Topic: "tasks",
 	})
@@ -61,7 +62,7 @@ func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		tpj.Task.NextPendingTime = int64(schedule.Next(time.Unix(tpj.Task.NextPendingTime, 0)).Second())
+		tpj.Task.NextPendingTime = schedule.Next(time.Unix(tpj.Task.NextPendingTime, 0)).Unix()
 
 		// 返回处理后的任务
 		return tpj.Task, nil
