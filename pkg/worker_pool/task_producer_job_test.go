@@ -240,7 +240,6 @@ func testProducerAutoPolling(t *testing.T) {
 func TestProducer(t *testing.T) {
 	// 设置测试环境
 	setup()
-	defer clearTest()
 
 	// 1. 创建不同时间点的任务并入库
 	createTasksAtDifferentTimes(t)
@@ -252,4 +251,7 @@ func TestProducer(t *testing.T) {
 	testProducerAutoPolling(t)
 
 	// 可以在这里添加更多验证，例如检查数据库中任务的状态变化
+
+	// 4. 结束
+	clearTest()
 }
