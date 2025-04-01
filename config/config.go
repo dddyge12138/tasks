@@ -5,6 +5,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	Pulsar   PulsarConfig   `mapstructure:"pulsar"`
+	Log      LogConfig      `mapstructure:"log"`
 }
 
 type ServerConfig struct {
@@ -30,4 +31,8 @@ type PulsarConfig struct {
 	Url               string `mapstructure:"url"`
 	OperationTimeOut  int    `mapstructure:"operation_time_out"`
 	ConnectionTimeOut int    `mapstructure:"connection_time_out"`
+}
+
+type LogConfig struct {
+	Path string `mapstructure:"path"`
 }

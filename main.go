@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"log"
 	"task/api/router"
 	"task/config"
 	"task/internal/daemon"
 	"task/pkg/database"
+	"task/pkg/logger"
 	"task/pkg/pulsar_queue"
-	"task/pkg/redis"
+	redis_db "task/pkg/redis"
 	"task/pkg/worker_pool"
+
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 func main() {
@@ -23,6 +25,9 @@ func main() {
 	cfg, r := InitAllComponents(ctx)
 	// 初始化任务生产者
 	InitTaskProducer(ctx)
+
+	// defer延迟执行的回调写在这里, 因为函数结束就会执行defer
+	defer logger.CloseLogger()
 
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
@@ -61,6 +66,12 @@ func InitAllComponents(ctx context.Context) (config.Config, *gin.Engine) {
 	_, err = pulsar_queue.NewPulsarClient(cfg.Pulsar)
 	if err != nil {
 		log.Fatalf("Failed to initialize Pulsar: %s", err)
+	}
+
+	// Initialize logger
+	err = logger.InitLogger(cfg.Log.Path)
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %s", err)
 	}
 
 	// Initialize Gin router

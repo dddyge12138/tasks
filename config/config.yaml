@@ -18,3 +18,6 @@ pulsar:
   url: "http://localhost:8080"
   operation_time_out: 30
   connection_time_out: 30
+
+log:
+  path: "./logs/task-service.log"

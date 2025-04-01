@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	"github.com/robfig/cron/v3"
-	"google.golang.org/appengine/log"
+	"log"
 	"strconv"
 	"task/api/types/request"
 	"task/internal/model"
 	"task/internal/repository"
 	"task/pkg/Constants"
-	"task/pkg/redis"
+	redis_db "task/pkg/redis"
 	"time"
+
+	"github.com/redis/go-redis/v9"
+	"github.com/robfig/cron/v3"
 )
 
 type TaskService interface {
@@ -95,7 +96,7 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 		// 单独对每个task存入具体内容，键名就是task_id, 使用管道一次性写入
 		taskStr, err := json.Marshal(task)
 		if err != nil {
-			log.Errorf(ctx, "task_id:%d 无法加载到redis中", task.TaskId)
+			log.Printf("task_id:%d 无法加载到redis中\n", task.TaskId)
 			continue
 		}
 		members = append(members, redis.Z{
