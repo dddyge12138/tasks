@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"strconv"
 	"task/api/types/request"
 	"task/internal/model"
 	"task/internal/repository"
 	"task/pkg/Constants"
+	"task/pkg/logger"
 	redis_db "task/pkg/redis"
 	"time"
 
@@ -96,14 +95,14 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 		// 单独对每个task存入具体内容，键名就是task_id, 使用管道一次性写入
 		taskStr, err := json.Marshal(task)
 		if err != nil {
-			log.Printf("task_id:%d 无法加载到redis中\n", task.TaskId)
+			logger.Logger.WithField("task_id", task.TaskId).Error("task无法加载到redis中")
 			continue
 		}
 		members = append(members, redis.Z{
 			Score:  float64(task.NextPendingTime),
 			Member: task.TaskId,
 		})
-		pipe.Set(ctx, fmt.Sprintf(Constants.TaskInfoKey, strconv.FormatInt(task.TaskId, 10)), taskStr, time.Hour)
+		pipe.Set(ctx, fmt.Sprintf(Constants.TaskInfoKey, task.TaskId), taskStr, time.Hour)
 	}
 	if len(members) == 0 {
 		return errors.New("没有需要加载的任务")

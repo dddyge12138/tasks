@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	pulsarURL        = "pulsar_queue://localhost:16650"
+	pulsarURL        = "pulsar://127.0.0.1:6650"
 	testTopic        = "test-topic"
 	testMessage      = "Hello Pulsar!"
 	subscriptionName = "test-subscription"

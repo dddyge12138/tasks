@@ -1,8 +1,8 @@
 package logger
 
 import (
+	"github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -11,6 +11,7 @@ import (
 var (
 	logFile *os.File
 	once    sync.Once
+	Logger  *logrus.Logger
 )
 
 // 初始化日志，确保只初始化一次
@@ -26,14 +27,17 @@ func InitLogger(logDir string) error {
 			return
 		}
 
+		log := logrus.New()
+		log.SetLevel(logrus.DebugLevel)
 		// 设置输出到文件和控制台
 		log.SetOutput(os.Stdout)
 		if logFile != nil {
 			// 同时输出到文件和控制台
 			log.SetOutput(io.MultiWriter(os.Stdout, logFile))
 		}
-		log.SetPrefix("[TASK]")
-		log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+		// 设置日志为json输出
+		log.SetFormatter(&logrus.JSONFormatter{})
+		Logger = log
 	})
 	return err
 }

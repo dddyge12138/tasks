@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"task/api/router"
 	"task/config"
 	"task/internal/daemon"
@@ -32,7 +31,7 @@ func main() {
 	// Start server
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	if err := r.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %s", err)
+		logger.Logger.WithError(err).Fatal("Failed to start server")
 	}
 }
 
@@ -42,36 +41,36 @@ func InitAllComponents(ctx context.Context) (config.Config, *gin.Engine) {
 	viper.AddConfigPath("config")
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config file: %s", err)
+		panic("Error reading config file")
 	}
 
 	var cfg config.Config
 	if err := viper.Unmarshal(&cfg); err != nil {
-		log.Fatalf("Unable to decode config into struct: %s", err)
+		panic("Unable to decode config into struct")
+	}
+
+	// Initialize logger
+	err := logger.InitLogger(cfg.Log.Path)
+	if err != nil {
+		logger.Logger.WithError(err).Fatal("Failed to initialize logger")
 	}
 
 	// Initialize database
-	err := database.NewPostgresDB(cfg.Database)
+	err = database.NewPostgresDB(cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %s", err)
+		logger.Logger.WithError(err).Fatal("Failed to initialize database")
 	}
 
 	// Initialize Redis
 	err = redis_db.NewRedisClient(cfg.Redis)
 	if err != nil {
-		log.Fatalf("Failed to initialize Redis: %s", err)
+		logger.Logger.WithError(err).Fatal("Failed to initialize Redis")
 	}
 
 	// Initialize Pulsar
 	_, err = pulsar_queue.NewPulsarClient(cfg.Pulsar)
 	if err != nil {
-		log.Fatalf("Failed to initialize Pulsar: %s", err)
-	}
-
-	// Initialize logger
-	err = logger.InitLogger(cfg.Log.Path)
-	if err != nil {
-		log.Fatalf("Failed to initialize logger: %s", err)
+		logger.Logger.WithError(err).Fatal("Failed to initialize Pulsar")
 	}
 
 	// Initialize Gin router
@@ -79,7 +78,7 @@ func InitAllComponents(ctx context.Context) (config.Config, *gin.Engine) {
 
 	taskHandler, err := InitTaskHandler(database.Db)
 	if err != nil {
-		log.Fatalf("Failed to initialize task handler: %s", err)
+		logger.Logger.WithError(err).Fatal("Failed to initialize task handler")
 	}
 	router.RegisterRoutes(r, taskHandler)
 	return cfg, r

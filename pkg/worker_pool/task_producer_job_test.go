@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"task/config"
 	"task/internal/model"
 	"task/internal/repository"
 	"task/internal/service"
 	"task/pkg/database"
+	"task/pkg/logger"
 	"task/pkg/pulsar_queue"
 	redis_db "task/pkg/redis"
 	"testing"
@@ -27,6 +29,13 @@ var (
 	cancelFunc  context.CancelFunc
 	resultChan  chan Result
 )
+
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	clearTest()
+	os.Exit(code)
+}
 
 // setup初始化测试环境，包括协程池的创建
 func setup() {
@@ -48,7 +57,15 @@ func setup() {
 	if err := viper.Unmarshal(&cfg); err != nil {
 		log.Fatalf("Unable to decode config into struct: %s", err)
 	}
-	err := database.NewPostgresDB(cfg.Database)
+
+	var err error
+	// Initialize logger
+	err = logger.InitLogger("../../runtime")
+	if err != nil {
+		logger.Logger.WithError(err).Fatal("Failed to initialize logger")
+	}
+
+	err = database.NewPostgresDB(cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %s", err)
 	}
@@ -239,7 +256,7 @@ func testProducerAutoPolling(t *testing.T) {
 // TestProducer测试生产者的完整流程
 func TestProducer(t *testing.T) {
 	// 设置测试环境
-	setup()
+	//setup()
 
 	// 1. 创建不同时间点的任务并入库
 	createTasksAtDifferentTimes(t)
@@ -253,5 +270,5 @@ func TestProducer(t *testing.T) {
 	// 可以在这里添加更多验证，例如检查数据库中任务的状态变化
 
 	// 4. 结束
-	clearTest()
+	//clearTest()
 }

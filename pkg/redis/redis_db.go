@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	"google.golang.org/appengine/log"
 	"strconv"
 	"task/config"
 	"task/internal/model"
 	"task/pkg/Constants"
+	"task/pkg/logger"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var RedisDb *redis.Client
@@ -31,9 +32,8 @@ func NewRedisClient(cfg config.RedisConfig) error {
 }
 
 /*
-*
-在redis中获取某个时间段需要执行的任务
-*/
+* 在redis中获取某个时间段需要执行的任务
+ */
 func GetTasksList(ctx context.Context, startTime, endTime int64) ([]*model.Task, error) {
 	var tasks []*model.Task
 	zRangeCmd := RedisDb.ZRangeByScore(ctx, Constants.TaskSlotKey, &redis.ZRangeBy{
@@ -45,7 +45,12 @@ func GetTasksList(ctx context.Context, startTime, endTime int64) ([]*model.Task,
 	}
 	taskKeyArr := []string{}
 	for _, taskId := range zRangeCmd.Val() {
-		taskKeyArr = append(taskKeyArr, fmt.Sprintf(Constants.TaskInfoKey, taskId))
+		taskIdInt64, err := strconv.ParseInt(taskId, 10, 64)
+		if err != nil {
+			logger.Logger.WithField("task_id", taskId).Error("转换taskId错误，请检查")
+			continue
+		}
+		taskKeyArr = append(taskKeyArr, fmt.Sprintf(Constants.TaskInfoKey, taskIdInt64))
 	}
 	mGetCmd := RedisDb.MGet(ctx, taskKeyArr...)
 	if mGetCmd.Err() != nil {
@@ -56,11 +61,22 @@ func GetTasksList(ctx context.Context, startTime, endTime int64) ([]*model.Task,
 		if task != nil {
 			err := json.Unmarshal([]byte(task.(string)), &tmpTask)
 			if err != nil {
-				log.Errorf(ctx, "从redis中获取到无法反序列化的任务,请检查")
+				logger.Logger.WithError(err).Error("从redis中获取到无法反序列化的任务,请检查")
 				continue
 			}
 			tasks = append(tasks, tmpTask)
 		}
 	}
 	return tasks, nil
+}
+
+func RemoveSlotTasks(ctx context.Context, taskId int64) error {
+	pipe := RedisDb.Pipeline()
+	pipe.ZRem(ctx, Constants.TaskSlotKey, taskId)
+	pipe.Del(ctx, fmt.Sprintf(Constants.TaskInfoKey, taskId))
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -10,7 +10,8 @@ CREATE TABLE tasks (
     params JSONB NOT NULL, -- 任务参数JSON数组
     cron_task_ids BIGINT[] DEFAULT NULL, -- 存储拆分后的子任务ID数组
     is_deleted SMALLINT NOT NULL DEFAULT 0,
-    version BIGINT DEFAULT 1,
+    version BIGINT DEFAULT 1,   -- 任务版本号, 当任务被修改的时候自增。
+    task_produce_count BIGINT DEFAULT 0, -- 任务被生产了多少次
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

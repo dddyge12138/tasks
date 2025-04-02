@@ -2,8 +2,9 @@ package worker_pool
 
 import (
 	"context"
-	"log"
+	"github.com/sirupsen/logrus"
 	"sync"
+	"task/pkg/logger"
 	"time"
 )
 
@@ -75,7 +76,7 @@ func (wp *WorkerPool) worker(ctx context.Context, id int) {
 			jobCtx, cancel := context.WithTimeout(ctx, wp.timeout)
 			value, err := job.Process(jobCtx)
 			if err != nil {
-				log.Printf("worker协程处理任务得到错误, err_msg:%s\n", err.Error())
+				logger.Logger.WithError(err).Error("worker协程处理任务得到错误")
 				cancel()
 				continue
 			}
@@ -104,7 +105,9 @@ func (wp *WorkerPool) processResults(ctx context.Context) {
 				if err := wp.callback(result); err != nil {
 					// 这里可以添加错误处理逻辑
 					// 例如记录日志或者重试
-					log.Printf("Error processing result: %+v, err %s", result, err.Error())
+					logger.Logger.WithFields(logrus.Fields{
+						"result": result,
+					}).WithError(err).Error("Error occur when processing result")
 				}
 			}
 		case <-wp.done:

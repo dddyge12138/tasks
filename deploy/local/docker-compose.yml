@@ -39,7 +39,7 @@ services:
       retries: 5
 
   pulsar:
-    image: apachepulsar/pulsar:2.6.0
+    image: apachepulsar/pulsar:2.10.2 # 升级到较新版本以同时支持arm64和x86_64
     container_name: pulsar
     ports:
       - "6650:6650"

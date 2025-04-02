@@ -12,6 +12,7 @@ type TaskRepository interface {
 	RemoveTask(ctx context.Context, task *model.Task) error
 	GetTaskById(ctx context.Context, taskId int64) (*model.Task, error)
 	GetTasksByTime(ctx context.Context, startTime, endTime int64) ([]*model.Task, error)
+	UpdateTaskAfterProduce(ctx context.Context, task *model.Task) error
 }
 
 type taskRepository struct {
@@ -44,4 +45,17 @@ func (r *taskRepository) GetTasksByTime(ctx context.Context, startTime, endTime 
 		return tasks, err
 	}
 	return tasks, nil
+}
+
+func (r *taskRepository) UpdateTaskAfterProduce(ctx context.Context, task *model.Task) error {
+	updateMap := map[string]interface{}{
+		"version":            task.Version,
+		"next_pending_time":  task.NextPendingTime,
+		"task_produce_count": task.TaskProduceCount,
+		"cron_task_ids":      task.CronTaskIds,
+	}
+	if err := r.db.WithContext(ctx).Where("task_id = ?", task.TaskId).Updates(updateMap).Error; err != nil {
+		return err
+	}
+	return nil
 }

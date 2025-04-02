@@ -15,9 +15,9 @@ redis:
   db: 0
 
 pulsar:
-  url: "http://localhost:8080"
+  url: "pulsar://localhost:6650"
   operation_time_out: 30
   connection_time_out: 30
 
 log:
-  path: "./logs/task-service.log"
+  path: "./runtime"

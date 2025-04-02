@@ -3,10 +3,15 @@ package worker_pool
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
+	"github.com/sirupsen/logrus"
 	"math/rand"
+	"strconv"
 	"task/internal/model"
+	"task/pkg/Constants"
+	"task/pkg/logger"
 	"task/pkg/pulsar_queue"
+	redis_db "task/pkg/redis"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -32,7 +37,7 @@ func InitProducer() {
 		Topic: "tasks",
 	})
 	if err != nil {
-		log.Fatalf("连接Pulsar消息队列失败:%v", err)
+		logger.Logger.WithError(err).Fatal("连接Pulsar消息队列失败")
 	}
 	Producer = producer
 }
@@ -46,6 +51,15 @@ func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 		return nil, ctx.Err()
 	default:
 		// 处理成可执行的任务，然后投递到消息队列
+		resCmd := redis_db.RedisDb.Set(
+			ctx,
+			fmt.Sprintf(Constants.TaskVersionKey, strconv.FormatInt(tpj.Task.TaskId, 10)),
+			tpj.Task.Version,
+			24*time.Hour,
+		)
+		if err := resCmd.Err(); err != nil {
+			return tpj.Task, err
+		}
 		taskMessage, _ := json.Marshal(TaskMessage{
 			TaskId:  tpj.Task.TaskId,
 			Params:  tpj.Task.Params,
@@ -54,7 +68,14 @@ func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 		msgReceipt, err := Producer.Send(ctx, &pulsar.ProducerMessage{
 			Payload: taskMessage,
 		})
-		log.Printf("生产者投递消息成功，消息id结构体:%+v", msgReceipt)
+		if err != nil {
+			logger.Logger.WithError(err).Error("投递消息失败")
+			return nil, err
+		}
+		logger.Logger.WithFields(logrus.Fields{
+			"msg_receipt": msgReceipt,
+			"task":        tpj.Task,
+		}).Info("生产者投递消息成功")
 
 		tpj.Task.CronTaskIds = []int64{rand.Int63()}
 		if len(tpj.Task.Cron) == 0 {
