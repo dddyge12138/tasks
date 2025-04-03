@@ -11,6 +11,7 @@ import (
 	"task/pkg/Constants"
 	"task/pkg/logger"
 	redis_db "task/pkg/redis"
+	"task/pkg/worker_pool"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -21,6 +22,7 @@ type TaskService interface {
 	CreateTask(ctx context.Context, req request.CreateTaskRequest) (*model.Task, error)
 	RemoveTask(ctx context.Context, req request.RemoveTaskRequest) error
 	LoadTask(ctx context.Context) error
+	ExecuteTask(ctx context.Context, task worker_pool.TaskMessage) (*model.Task, error)
 }
 
 type taskService struct {
@@ -113,4 +115,17 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (s *taskService) ExecuteTask(ctx context.Context, task worker_pool.TaskMessage) (*model.Task, error) {
+	// TODO
+	// 1 => 通过redis判断版本号是否过期
+
+	// 2 => 通过限流组件判断当前是否限流
+
+	// 3 => 通过params参数执行某些操作(这里就暂时time.Sleep模拟耗时吧, 随机1-30秒)
+
+	// 4 => 执行结果后返回结果
+
+	return nil, nil
 }
