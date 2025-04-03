@@ -1,4 +1,4 @@
-package worker_pool
+package daemon
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"task/internal/model"
 	"task/pkg/Constants"
 	"task/pkg/logger"
-	"task/pkg/pulsar_queue"
 	redis_db "task/pkg/redis"
 	"time"
 
@@ -20,27 +19,11 @@ import (
 
 // TaskProducerJob实现了Job接口，用来处理(生产者的任务对象)
 type TaskProducerJob struct {
-	Task *model.Task
-}
-
-type TaskMessage struct {
-	TaskId  int64  `json:"task_id"`
-	Params  []byte `json:"params"`
-	Version int64  `json:"version"`
+	Task         *model.Task
+	TaskProducer *TaskProducer
 }
 
 var Parser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-var Producer pulsar.Producer
-
-func InitProducer() {
-	producer, err := pulsar_queue.NewProducer(pulsar.ProducerOptions{
-		Topic: "tasks",
-	})
-	if err != nil {
-		logger.Logger.WithError(err).Fatal("连接Pulsar消息队列失败")
-	}
-	Producer = producer
-}
 
 func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 	// 这里是CPU密集型的任务处理逻辑
@@ -60,28 +43,32 @@ func (tpj *TaskProducerJob) Process(ctx context.Context) (interface{}, error) {
 		if err := resCmd.Err(); err != nil {
 			return tpj.Task, err
 		}
-		taskMessage, _ := json.Marshal(TaskMessage{
-			TaskId:  tpj.Task.TaskId,
-			Params:  tpj.Task.Params,
-			Version: tpj.Task.Version,
+		cronTaskId := rand.Int63()
+		taskMessage, _ := json.Marshal(model.TaskMessage{
+			TaskId:      tpj.Task.TaskId,
+			Params:      tpj.Task.Params,
+			Version:     tpj.Task.Version,
+			CronTaskIds: []int64{cronTaskId},
 		})
-		msgReceipt, err := Producer.Send(ctx, &pulsar.ProducerMessage{
+		msgReceipt, err := tpj.TaskProducer.Send(ctx, &pulsar.ProducerMessage{
 			Payload: taskMessage,
 		})
 		if err != nil {
 			logger.Logger.WithError(err).Error("投递消息失败")
 			return nil, err
 		}
+		tpj.Task.TaskProduceCount++
+		tpj.Task.CronTaskIds = []int64{cronTaskId}
 		logger.Logger.WithFields(logrus.Fields{
-			"msg_receipt": msgReceipt,
+			"msg_receipt": msgReceipt.String(),
 			"task":        tpj.Task,
 		}).Info("生产者投递消息成功")
 
-		tpj.Task.CronTaskIds = []int64{rand.Int63()}
 		if len(tpj.Task.Cron) == 0 {
+			// 一次性任务执行结束就把IsDeleted置1
+			tpj.Task.IsDeleted = 1
 			return tpj.Task, nil
 		}
-		tpj.Task.Version++
 		schedule, err := Parser.Parse(tpj.Task.Cron)
 		if err != nil {
 			return nil, err

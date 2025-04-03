@@ -4,40 +4,68 @@ package daemon
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"task/internal/model"
 	"task/internal/repository"
-	"task/pkg/database"
 	"task/pkg/logger"
+	"task/pkg/pulsar_queue"
 	redis_db "task/pkg/redis"
 	"task/pkg/worker_pool"
 	"time"
+
+	"github.com/apache/pulsar-client-go/pulsar"
+
+	"github.com/sirupsen/logrus"
 )
 
-// ProducerWorkerPool是一个全局的生产者协程池实例
-var ProducerWorkerPoolInstance *worker_pool.WorkerPool
-var taskRepo repository.TaskRepository
+type TaskProducer struct {
+	taskRepo   repository.TaskRepository
+	workerPool *worker_pool.WorkerPool
+	logger     *logrus.Logger
+	producer   pulsar.Producer
+	done       chan struct{}
+}
 
-func InitProducerWorkerPool(ctx context.Context) {
-	taskRepo = repository.NewTaskRepository(database.Db)
-	// 创建协程池，设置10个工作协程，队列大小100， 单任务超时10秒
-	ProducerWorkerPoolInstance = worker_pool.NewWorkerPool(10, 100, 10*time.Second)
-	// 设置回调函数，用于处理工作协程的结果
-	// 生产者生产任务后的结果可以忽略
-	ProducerWorkerPoolInstance.SetCallback(func(result worker_pool.Result) error {
+func NewTaskProducer(
+	taskRepo repository.TaskRepository,
+	logger *logrus.Logger,
+) (*TaskProducer, error) {
+	wp := worker_pool.NewWorkerPool(10, 100, 10*time.Second)
+
+	producer, err := pulsar_queue.NewProducer(pulsar.ProducerOptions{
+		Topic: "tasks",
+	})
+	if err != nil {
+		logger.WithError(err).Fatal("连接Pulsar消息队列失败")
+		return nil, err
+	}
+	tp := &TaskProducer{
+		taskRepo:   taskRepo,
+		workerPool: wp,
+		logger:     logger,
+		producer:   producer,
+		done:       make(chan struct{}),
+	}
+
+	// 设置回调函数
+	wp.SetCallback(func(ctx context.Context, result worker_pool.Result) error {
+		logger.WithFields(logrus.Fields{
+			"result": result,
+		}).Info("生产者结果监听接收到结果")
 		if result.Err != nil {
 			// 这里可以处理错误
+			logger.WithError(result.Err).Error("Failed to handle task produce result")
 			return result.Err
 		}
 
 		task, ok := result.Value.(*model.Task)
 		if !ok {
+			logger.Errorf("expected *mode.Task but got %T", result.Value)
 			return fmt.Errorf("expected *mode.Task but got %T", result.Value)
 		}
 
 		// 更新任务状态
 		if err := taskRepo.UpdateTaskAfterProduce(ctx, task); err != nil {
-			logger.Logger.WithFields(logrus.Fields{
+			logger.WithFields(logrus.Fields{
 				"task_id": task.TaskId,
 				"err":     err,
 			}).Error("Fail to update task after produce")
@@ -45,7 +73,7 @@ func InitProducerWorkerPool(ctx context.Context) {
 		}
 		// 删除redis槽内的任务以及任务详情。保留redis任务的版本号供下游消费者查询是否执行
 		if err := redis_db.RemoveSlotTasks(ctx, task.TaskId); err != nil {
-			logger.Logger.WithFields(logrus.Fields{
+			logger.WithFields(logrus.Fields{
 				"task_id": task.TaskId,
 				"err":     err,
 			}).Error("Fail to remove task from redis")
@@ -54,23 +82,32 @@ func InitProducerWorkerPool(ctx context.Context) {
 
 		return nil
 	})
-
-	// 启动协程池
-	ProducerWorkerPoolInstance.Start(ctx)
+	return tp, nil
 }
 
-func TaskProducerRun(ctx context.Context) {
+func (tp *TaskProducer) Start(ctx context.Context) {
+	// 启动协程池
+	tp.workerPool.Start(ctx)
+	go tp.TaskProducerRun()
+}
+
+func (tp *TaskProducer) Stop(ctx context.Context) {
+	tp.workerPool.Stop()
+	tp.done <- struct{}{}
+}
+
+func (tp *TaskProducer) TaskProducerRun() {
 	var tasks []*model.Task
 	var err error
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-tp.done:
 			return
 		case now := <-ticker.C:
-			jobTimeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			tasks, err = redis_db.GetTasksList(jobTimeoutCtx, now.Add(-10*time.Minute).Unix(), now.Add(30*time.Second).Unix())
+			jobTimeoutCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			tasks, err = redis_db.GetTasksList(jobTimeoutCtx, now.Add(-20*time.Minute).Unix(), now.Add(30*time.Second).Unix())
 			if err != nil {
 				logger.Logger.WithFields(logrus.Fields{
 					"current_time": now.Format("Y-m-d H:i:s"),
@@ -81,9 +118,9 @@ func TaskProducerRun(ctx context.Context) {
 			}
 
 			for _, task := range tasks {
-				taskJob := &worker_pool.TaskProducerJob{Task: task}
+				taskJob := &TaskProducerJob{Task: task, TaskProducer: tp}
 				// 提交到协程池
-				if !ProducerWorkerPoolInstance.Submit(taskJob) {
+				if !tp.workerPool.Submit(taskJob) {
 					// 提交任务失败
 					logger.Logger.WithFields(logrus.Fields{
 						"task_id": task.TaskId,
@@ -96,4 +133,8 @@ func TaskProducerRun(ctx context.Context) {
 			cancel()
 		}
 	}
+}
+
+func (tp *TaskProducer) Send(ctx context.Context, pulsarMessage *pulsar.ProducerMessage) (pulsar.MessageID, error) {
+	return tp.producer.Send(ctx, pulsarMessage)
 }

@@ -1,12 +1,12 @@
-package worker_pool
+package daemon
 
 import (
 	"context"
 	"encoding/json"
-	"task/internal/service"
-
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/sirupsen/logrus"
+	"task/internal/model"
+	"task/internal/service"
 )
 
 type TaskConsumerJob struct {
@@ -17,7 +17,7 @@ type TaskConsumerJob struct {
 }
 
 func (tcj *TaskConsumerJob) Process(ctx context.Context) (interface{}, error) {
-	var taskMessage TaskMessage
+	var taskMessage model.TaskMessage
 	if err := json.Unmarshal(tcj.Message.Payload(), &taskMessage); err != nil {
 		tcj.Logger.WithError(err).Error("Failed to unmarshal task message")
 		tcj.Consumer.Ack(tcj.Message)

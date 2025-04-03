@@ -2,10 +2,11 @@ package worker_pool
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"task/pkg/logger"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Job interface {
@@ -27,8 +28,8 @@ type WorkerPool struct {
 	results     chan Result
 	done        chan struct{} // 用于通知协程池关闭
 	wg          sync.WaitGroup
-	timeout     time.Duration      // 单个任务的超时时间
-	callback    func(Result) error // 结果处理的回调函数
+	timeout     time.Duration                       // 单个任务的超时时间
+	callback    func(context.Context, Result) error // 结果处理的回调函数
 }
 
 func NewWorkerPool(workerCount int, queueSize int, timeout time.Duration) *WorkerPool {
@@ -42,7 +43,7 @@ func NewWorkerPool(workerCount int, queueSize int, timeout time.Duration) *Worke
 	}
 }
 
-func (wp *WorkerPool) SetCallback(callback func(Result) error) {
+func (wp *WorkerPool) SetCallback(callback func(context.Context, Result) error) {
 	wp.callback = callback
 }
 
@@ -72,21 +73,17 @@ func (wp *WorkerPool) worker(ctx context.Context, id int) {
 			if !ok {
 				return
 			}
-			// 为每一个任务创建一个超时上下文
-			jobCtx, cancel := context.WithTimeout(ctx, wp.timeout)
-			value, err := job.Process(jobCtx)
+
+			value, err := job.Process(ctx)
 			if err != nil {
 				logger.Logger.WithError(err).Error("worker协程处理任务得到错误")
-				cancel()
 				continue
 			}
-			cancel()
+
 			// 将结果发送到结果channel
 			select {
 			case wp.results <- Result{Value: value, Err: err, Job: job}:
 			case <-wp.done:
-				return
-			case <-jobCtx.Done():
 				return
 			}
 		}
@@ -99,10 +96,10 @@ func (wp *WorkerPool) processResults(ctx context.Context) {
 		select {
 		case result, ok := <-wp.results:
 			if !ok {
-				return
+				continue
 			}
 			if wp.callback != nil {
-				if err := wp.callback(result); err != nil {
+				if err := wp.callback(ctx, result); err != nil {
 					// 这里可以添加错误处理逻辑
 					// 例如记录日志或者重试
 					logger.Logger.WithFields(logrus.Fields{

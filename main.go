@@ -3,17 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"task/api/router"
 	"task/config"
-	"task/internal/daemon"
 	"task/pkg/database"
 	"task/pkg/logger"
 	"task/pkg/pulsar_queue"
 	redis_db "task/pkg/redis"
-	"task/pkg/worker_pool"
-
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 )
 
 func main() {
@@ -85,12 +82,5 @@ func InitAllComponents(ctx context.Context) (config.Config, *gin.Engine) {
 }
 
 func InitTaskProducer(ctx context.Context) {
-	// 初始化pulsar客户端
-	worker_pool.InitProducer()
-	// 初始化生产者的协程池
-	daemon.InitProducerWorkerPool(ctx)
-	// 启动任务生产者
-	go daemon.TaskProducerRun(ctx)
-	// 主程序结束时关闭工作池
-	defer daemon.ProducerWorkerPoolInstance.Stop()
+
 }

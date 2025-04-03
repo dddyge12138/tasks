@@ -11,7 +11,6 @@ import (
 	"task/pkg/Constants"
 	"task/pkg/logger"
 	redis_db "task/pkg/redis"
-	"task/pkg/worker_pool"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -22,7 +21,7 @@ type TaskService interface {
 	CreateTask(ctx context.Context, req request.CreateTaskRequest) (*model.Task, error)
 	RemoveTask(ctx context.Context, req request.RemoveTaskRequest) error
 	LoadTask(ctx context.Context) error
-	ExecuteTask(ctx context.Context, task worker_pool.TaskMessage) (*model.Task, error)
+	ExecuteTask(ctx context.Context, task model.TaskMessage) (*model.Task, error)
 }
 
 type taskService struct {
@@ -117,7 +116,7 @@ func (s *taskService) LoadTask(ctx context.Context) error {
 	return nil
 }
 
-func (s *taskService) ExecuteTask(ctx context.Context, task worker_pool.TaskMessage) (*model.Task, error) {
+func (s *taskService) ExecuteTask(ctx context.Context, task model.TaskMessage) (*model.Task, error) {
 	// TODO
 	// 1 => 通过redis判断版本号是否过期
 

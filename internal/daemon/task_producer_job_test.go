@@ -1,8 +1,7 @@
-package worker_pool
+package daemon
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"task/pkg/logger"
 	"task/pkg/pulsar_queue"
 	redis_db "task/pkg/redis"
+	"task/pkg/worker_pool"
 	"testing"
 	"time"
 
@@ -27,7 +27,8 @@ var (
 	taskService service.TaskService
 	ctx         context.Context
 	cancelFunc  context.CancelFunc
-	resultChan  chan Result
+	resultChan  chan worker_pool.Result
+	producer    *TaskProducer
 )
 
 func TestMain(m *testing.M) {
@@ -43,7 +44,7 @@ func setup() {
 	ctx, cancelFunc = context.WithCancel(context.Background())
 
 	// 设置结果回调函数
-	resultChan = make(chan Result, 10)
+	resultChan = make(chan worker_pool.Result, 10)
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -84,67 +85,13 @@ func setup() {
 	}
 
 	// 初始化生产者
-	InitProducer()
-	initProducerWorkerPool(ctx)
-	go TaskProducerRun(ctx)
-	log.Println("初始化完成")
-}
-
-var producerWorkerPoolInstance *WorkerPool
-
-func initProducerWorkerPool(ctx context.Context) {
-	// 创建协程池，设置10个工作协程，队列大小100， 单任务超时10秒
-	producerWorkerPoolInstance = NewWorkerPool(10, 100, 10*time.Second)
-	// 设置回调函数，用于处理工作协程的结果
-	// 生产者生产任务后的结果可以忽略
-	producerWorkerPoolInstance.SetCallback(func(result Result) error {
-		if result.Err != nil {
-			// 这里可以处理错误
-			return result.Err
-		}
-
-		_, ok := result.Value.(*model.Task)
-		if !ok {
-			return fmt.Errorf("expected *mode.Task but got %T", result.Value)
-		}
-		return nil
-	})
-
-	// 启动协程池
-	producerWorkerPoolInstance.Start(ctx)
-}
-
-func TaskProducerRun(ctx context.Context) {
-	var tasks []*model.Task
-	var err error
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case now := <-ticker.C:
-			jobTimeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			tasks, err = redis_db.GetTasksList(jobTimeoutCtx, now.Add(-10*time.Minute).Unix(), now.Add(30*time.Second).Unix())
-			if err != nil {
-				log.Printf("Fail to produce tasks, current_time: %s,err_msg is: %s, err is: %v", now.Format("Y-m-d H:i:s"), err.Error(), err)
-				cancel()
-				continue
-			}
-
-			for _, task := range tasks {
-				taskJob := &TaskProducerJob{Task: task}
-				// 提交到协程池
-				if !producerWorkerPoolInstance.Submit(taskJob) {
-					// 提交任务失败
-					log.Printf("Failed to submit task %d to worker pool, task: %+v", task.TaskId, task)
-				}
-			}
-
-			// Finally release the ticker
-			cancel()
-		}
+	producer, err = NewTaskProducer(taskRepo, logger.Logger)
+	if err != nil {
+		log.Fatalf("初始化生产者失败")
 	}
+	producer.Start(ctx)
+
+	log.Println("初始化完成")
 }
 
 // clear清理测试环境
@@ -154,7 +101,7 @@ func clearTest() {
 	if cancelFunc != nil {
 		cancelFunc()
 	}
-	producerWorkerPoolInstance.Stop()
+	producer.Stop(ctx)
 	// 关闭结果通道
 	close(resultChan)
 }

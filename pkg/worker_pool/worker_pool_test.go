@@ -52,7 +52,7 @@ func TestWorkerPoolBasicFunctionality(t *testing.T) {
 	var errorCount int32
 
 	// 设置回调函数
-	wp.SetCallback(func(result Result) error {
+	wp.SetCallback(func(ctx context.Context, result Result) error {
 		if result.Err != nil {
 			atomic.AddInt32(&errorCount, 1)
 			return result.Err
@@ -123,7 +123,7 @@ func TestWorkerPoolTimeout(t *testing.T) {
 	wp := NewWorkerPool(2, 5, 100*time.Millisecond)
 
 	var timeoutCount int32
-	wp.SetCallback(func(result Result) error {
+	wp.SetCallback(func(ctx context.Context, result Result) error {
 		if result.Err != nil && errors.Is(result.Err, context.DeadlineExceeded) {
 			atomic.AddInt32(&timeoutCount, 1)
 		}
@@ -164,7 +164,7 @@ func TestWorkerPoolCancelContext(t *testing.T) {
 
 	var cancelled bool
 	// 设置回调函数以检测取消
-	wp.SetCallback(func(result Result) error {
+	wp.SetCallback(func(ctx context.Context, result Result) error {
 		if errors.Is(result.Err, context.Canceled) {
 			cancelled = true
 			wg.Done()

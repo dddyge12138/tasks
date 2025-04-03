@@ -69,7 +69,7 @@ func (tc *TaskConsumer) consumeMessages(ctx context.Context) {
 				continue
 			}
 			// 处理消息, 用协程池消费
-			job := &worker_pool.TaskConsumerJob{
+			job := &TaskConsumerJob{
 				Message:     msg,
 				Consumer:    tc.consumer,
 				Logger:      tc.logger,
@@ -91,7 +91,7 @@ func (tc *TaskConsumer) processMessage(ctx context.Context, msg pulsar.Message) 
 	tc.consumer.Ack(msg)
 }
 
-func (tc *TaskConsumer) handleTaskResult(result worker_pool.Result) error {
+func (tc *TaskConsumer) handleTaskResult(ctx context.Context, result worker_pool.Result) error {
 	if result.Err != nil {
 		tc.logger.WithError(result.Err).Error("Failed to handle task consume result")
 		// TODO 根据错误类型决定是否重试以及记录更详细的日志

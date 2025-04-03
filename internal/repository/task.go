@@ -2,9 +2,9 @@ package repository
 
 import (
 	"context"
-	"task/internal/model"
-
+	"github.com/lib/pq"
 	"gorm.io/gorm"
+	"task/internal/model"
 )
 
 type TaskRepository interface {
@@ -41,20 +41,14 @@ func (r *taskRepository) GetTaskById(ctx context.Context, taskId int64) (*model.
 
 func (r *taskRepository) GetTasksByTime(ctx context.Context, startTime, endTime int64) ([]*model.Task, error) {
 	var tasks []*model.Task
-	if err := r.db.WithContext(ctx).Where("next_pending_time >= ? AND next_pending_time <= ?", startTime, endTime).Find(&tasks).Error; err != nil {
+	if err := r.db.WithContext(ctx).Table("tasks").Where("next_pending_time >= ? AND next_pending_time <= ?", startTime, endTime).Where("is_deleted = ?", 0).Find(&tasks).Error; err != nil {
 		return tasks, err
 	}
 	return tasks, nil
 }
 
 func (r *taskRepository) UpdateTaskAfterProduce(ctx context.Context, task *model.Task) error {
-	updateMap := map[string]interface{}{
-		"version":            task.Version,
-		"next_pending_time":  task.NextPendingTime,
-		"task_produce_count": task.TaskProduceCount,
-		"cron_task_ids":      task.CronTaskIds,
-	}
-	if err := r.db.WithContext(ctx).Where("task_id = ?", task.TaskId).Updates(updateMap).Error; err != nil {
+	if err := r.db.WithContext(ctx).Exec("Update tasks set cron_task_ids = ?, task_produce_count = ?, next_pending_time = ?, is_deleted = ? where task_id = ?", pq.Int64Array(task.CronTaskIds), task.TaskProduceCount, task.NextPendingTime, task.IsDeleted, task.TaskId).Error; err != nil {
 		return err
 	}
 	return nil

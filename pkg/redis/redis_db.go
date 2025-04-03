@@ -56,8 +56,9 @@ func GetTasksList(ctx context.Context, startTime, endTime int64) ([]*model.Task,
 	if mGetCmd.Err() != nil {
 		return tasks, mGetCmd.Err()
 	}
-	var tmpTask *model.Task
+
 	for _, task := range mGetCmd.Val() {
+		var tmpTask *model.Task
 		if task != nil {
 			err := json.Unmarshal([]byte(task.(string)), &tmpTask)
 			if err != nil {

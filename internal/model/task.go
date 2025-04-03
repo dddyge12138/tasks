@@ -43,3 +43,11 @@ type TaskResult struct {
 	Result     []byte    `json:"result" gorm:"type:jsonb"`
 	CreatedAt  time.Time `json:"created_at"`
 }
+
+// pulsar中消息的格式
+type TaskMessage struct {
+	TaskId      int64   `json:"task_id"`
+	Params      []byte  `json:"params"`
+	Version     int64   `json:"version"`
+	CronTaskIds []int64 `json:"cron_task_ids"`
+}
